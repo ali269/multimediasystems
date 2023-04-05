@@ -1,7 +1,9 @@
 let explosions = [];
-let whistles = [];
-let test_whistle;
+let whistleSystem;
+let currentActiveWhistle = '';
+
 let explode;
+let whistleSound;
 
 const colors = [
   [204, 67, 24],
@@ -18,9 +20,17 @@ const colors = [
 function setup() {
   createCanvas(1200, 812);
   explode = loadSound("./sound/explode.mp3");
-  test_whistle = new Whistle(createVector(500, 500));
+  whistleSound = loadSound("./sound/fire.mp3");
+  whistleSystem = new WhistleSystem();
 }
 
+function draw() {
+  background(51);
+  whistleSystem.run();
+  for (let i = 0; i < explosions.length; i++) {
+    explosions[i].run();
+  }
+}
 // Actions
 function explosion(position) {
   let system = new ParticleSystem(position);
@@ -29,34 +39,16 @@ function explosion(position) {
   explosions.push(system);
 }
 
-function strikeWhistle(position) {
-  let whistle = new Whistle(position);
-  whistles.push(whistle);
-}
-
 // Events
 function mousePressed() {
-  // if (mouseY > 500) {
-  //   strikeWhistle(createVector(mouseX, mouseY));
-  // }
-  test_whistle = new Whistle(createVector(mouseX, mouseY));
+  whistleSystem.addWhistle(createVector(mouseX, mouseY));
+  whistleSound.play();
 }
 
 function mouseReleased() {
-  test_whistle.powerOff();
+  whistleSystem.powerOff();
 }
 
-function draw() {
-  background(51);
-  test_whistle.run();
-  for (let i = 0; i < whistles.length; i++) {
-    whistles[i].run();
-  }
-
-  for (let i = 0; i < explosions.length; i++) {
-    explosions[i].run();
-  }
-}
 
 // Classes
 
@@ -128,13 +120,17 @@ ParticleSystem.prototype.run = function() {
 };
 //#endregion
 
-//#region 
+//#region A simple Whistle
 let Whistle = function(position) {
   this.acceleration = createVector(0, 0.05);
   this.velocity = createVector(random(-1, 1), random(-2, -4));
   this.position = position.copy();
   this.color = colors[parseInt(random(0, 8))];
   this.haspower = true;
+}
+
+Whistle.prototype.getPosition = function() {
+  return this.position.copy();
 }
 
 Whistle.prototype.powerOff = function() {
@@ -170,4 +166,34 @@ Whistle.prototype.display = function() {
   ellipse(this.position.x - 4 * this.velocity.x, 
     this.position.y - 4 * this.velocity.y, 2, 2);
 }
+
+Whistle.prototype.isDead = function() {
+  return Math.abs(this.velocity.y) < 0.15 || this.position.y < 100;
+}
+//#endregion
+//#region A simple WhistleSystem
+let WhistleSystem = function() {
+  this.whistles = [];
+}
+
+WhistleSystem.prototype.addWhistle = function(position) {
+  let wh = new Whistle(position);
+  this.whistles.push(wh);
+}
+
+WhistleSystem.prototype.powerOff = function() {
+  let idx = this.whistles.length - 1;
+  this.whistles[idx].powerOff();
+}
+
+WhistleSystem.prototype.run = function() {
+  for(let i = 0; i < this.whistles.length; i++) {
+    this.whistles[i].run();
+    if (this.whistles[i].isDead()) {
+      explosion(this.whistles[i].getPosition());
+      this.whistles.splice(i, 1);
+    }
+  }
+}
+
 //#endregion
