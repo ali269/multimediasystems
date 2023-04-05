@@ -1,6 +1,12 @@
 let explosions = [];
 let whistleSystem;
 let currentActiveWhistle = '';
+let randomLifeTime;
+
+let lrstage;
+let rlstage;
+let lrwait;
+let rlwait;
 
 let explode;
 let whistleSound;
@@ -22,14 +28,22 @@ function setup() {
   explode = loadSound("./sound/explode.mp3");
   whistleSound = loadSound("./sound/fire.mp3");
   whistleSystem = new WhistleSystem();
+  randomLifeTime = 0;
+  lrstage = rlstage = 0;
+  lrwait = rlwait = 0;
 }
 
 function draw() {
   background(51);
+  randomGenerator();
   whistleSystem.run();
+  swingHandler();
   for (let i = 0; i < explosions.length; i++) {
     explosions[i].run();
   }
+  randomLifeTime -= 1;
+  lrwait -= 1;
+  rlwait -= 1;
 }
 // Actions
 function explosion(position) {
@@ -39,6 +53,57 @@ function explosion(position) {
   explosions.push(system);
 }
 
+function fireWhistle(position) {
+  whistleSystem.addWhistle(position);
+  whistleSound.play();
+  whistleSystem.powerOff();
+}
+
+function randomGenerator() {
+  if (random(0, 10) >= 5 && randomLifeTime <= 0) {
+    fireWhistle(createVector(random(0, 1200), random(300, 750)));
+    randomLifeTime = 255;
+  }
+  else if (randomLifeTime <= 0) {
+    randomLifeTime = 25;
+  }
+}
+
+function key1Handler() {
+  let num = parseInt(random(10, 20));
+  for (let i = 0; i < num; i++) {
+    fireWhistle(createVector(random(0, 1200), random(300, 750)));
+  }
+}
+
+function swingHandler() {
+  if (lrstage > 0 && lrwait <= 0) {
+    lrwait = 25;
+    for (let i = 0; i < 3; i++) {
+      fireWhistle(createVector(1200 - lrstage * 100 + random(0, 100), random(300, 750)));
+    }
+    lrstage -= 1;
+  }
+  if (rlstage > 0 && rlwait <= 0) {
+    rlwait = 25;
+    for (let i = 0; i < 3; i++) {
+      fireWhistle(createVector(rlstage * 100 - random(0, 100), random(300, 750)));
+    }
+    rlstage -= 1;
+  }
+}
+
+function key2Handler() {
+  lrstage = 12;
+}
+
+function key3Handler() {
+  rlstage = 12;
+}
+
+
+
+
 // Events
 function mousePressed() {
   whistleSystem.addWhistle(createVector(mouseX, mouseY));
@@ -47,6 +112,18 @@ function mousePressed() {
 
 function mouseReleased() {
   whistleSystem.powerOff();
+}
+
+function keyTyped() {
+  if (keyCode === 49) {
+    key1Handler();
+  }
+  if (keyCode === 50) {
+    key2Handler();
+  }
+  if (keyCode === 51) {
+    key3Handler();
+  }
 }
 
 
@@ -123,7 +200,7 @@ ParticleSystem.prototype.run = function() {
 //#region A simple Whistle
 let Whistle = function(position) {
   this.acceleration = createVector(0, 0.05);
-  this.velocity = createVector(random(-1, 1), random(-2, -4));
+  this.velocity = createVector(random(-1, 1), random(-2, -6));
   this.position = position.copy();
   this.color = colors[parseInt(random(0, 8))];
   this.haspower = true;
@@ -171,6 +248,7 @@ Whistle.prototype.isDead = function() {
   return Math.abs(this.velocity.y) < 0.15 || this.position.y < 100;
 }
 //#endregion
+
 //#region A simple WhistleSystem
 let WhistleSystem = function() {
   this.whistles = [];
